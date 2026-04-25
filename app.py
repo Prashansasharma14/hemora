@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 import pickle
+from datetime import datetime
 
 # Page config
 st.set_page_config(page_title="HemoraAI | PPH Risk Predictor", layout="wide")
@@ -18,7 +19,7 @@ st.markdown("---")
 # Layout
 col1, col2 = st.columns(2)
 
-# LEFT SIDE (Patient Data)
+# LEFT SIDE
 with col1:
     st.markdown("### 👩 Patient Profile")
 
@@ -27,7 +28,7 @@ with col1:
     hb = st.number_input("Hemoglobin (g/dL)", 0.0, 17.0)
     bmi = st.number_input("BMI", 15.0, 40.0)
 
-# RIGHT SIDE (Clinical Data)
+# RIGHT SIDE
 with col2:
     st.markdown("### ⚕️ Clinical Risk Factors")
 
@@ -39,7 +40,7 @@ with col2:
     prev_pph = st.selectbox("Previous PPH", ["No", "Yes"])
     placenta = st.selectbox("Placenta Issues", ["No", "Yes"])
 
-# Convert categorical inputs
+# Convert to numeric
 prev_lscs = 1 if prev_lscs == "Yes" else 0
 induction = 1 if induction == "Yes" else 0
 prolonged = 1 if prolonged == "Yes" else 0
@@ -50,7 +51,7 @@ placenta = 1 if placenta == "Yes" else 0
 
 st.markdown("---")
 
-# Predict button
+# Prediction
 if st.button("🔍 Predict Risk"):
 
     input_data = np.array([[age, parity, hb, prev_lscs, induction,
@@ -63,12 +64,15 @@ if st.button("🔍 Predict Risk"):
     st.markdown("## 🧠 Risk Assessment")
     st.metric(label="Risk Score", value=f"{round(prob*100,2)} %")
 
-    # Risk Levels
+    # Risk category
     if prob > 0.7:
+        risk_label = "High Risk"
         st.error("🔴 High Risk of PPH")
     elif prob > 0.4:
+        risk_label = "Moderate Risk"
         st.warning("🟠 Moderate Risk")
     else:
+        risk_label = "Low Risk"
         st.success("🟢 Low Risk")
 
     st.markdown("---")
@@ -87,12 +91,12 @@ if st.button("🔍 Predict Risk"):
     st.markdown("---")
 
     # Explainability
-    st.markdown("### 📊 Key Risk Factors")
+    st.markdown("### 📊 Why this risk?")
 
     reasons = []
 
     if hb < 9:
-        reasons.append("Low Hemoglobin")
+        reasons.append("Low Hemoglobin (Anemia)")
     if parity >= 3:
         reasons.append("High Parity")
     if prev_pph:
@@ -113,9 +117,23 @@ if st.button("🔍 Predict Risk"):
     else:
         st.info("No major high-risk factors detected")
 
+    # Model insights
+    try:
+        st.markdown("### 🤖 Model Insights")
+        feature_names = ['Age','Parity','Hb','Prev_LSCS','Induction',
+                         'Prolonged','Multiple','BMI','BP','Prev_PPH','Placenta']
+
+        importance = model.feature_importances_
+        sorted_features = sorted(zip(feature_names, importance), key=lambda x: x[1], reverse=True)
+
+        for f, v in sorted_features[:3]:
+            st.write(f"• {f} has high influence on prediction")
+    except:
+        pass
+
     st.markdown("---")
 
-    # Clinical Recommendation
+    # Clinical Recommendations
     st.markdown("### 🏥 Suggested Plan")
 
     if prob > 0.7:
@@ -136,6 +154,38 @@ if st.button("🔍 Predict Risk"):
         - Routine care
         - Standard monitoring
         """)
+
+    st.markdown("---")
+
+    # Download report
+    st.markdown("### 📥 Download Report")
+
+    report = f"""
+HemoraAI PPH Risk Report
+Generated: {datetime.now()}
+
+Patient Details:
+Age: {age}
+Parity: {parity}
+Hb: {hb}
+BMI: {bmi}
+
+Risk Score: {round(prob*100,2)}%
+Risk Category: {risk_label}
+
+Contributing Factors:
+{', '.join(reasons) if reasons else 'None'}
+
+Clinical Plan:
+{risk_label}
+"""
+
+    st.download_button(
+        label="Download Report",
+        data=report,
+        file_name="pph_risk_report.txt",
+        mime="text/plain"
+    )
 
 # Footer
 st.markdown("---")
