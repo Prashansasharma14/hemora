@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pickle
 from datetime import datetime
+import pandas as pd
 
 # Page config
 st.set_page_config(page_title="HemoraAI | PPH Risk Predictor", layout="wide")
@@ -9,11 +10,15 @@ st.set_page_config(page_title="HemoraAI | PPH Risk Predictor", layout="wide")
 # Load model
 model = pickle.load(open('pph_model.pkl', 'rb'))
 
-# Header
-st.title("🩸 HemoraAI")
-st.subheader("AI-Based Postpartum Hemorrhage Risk Predictor")
-st.caption("Clinical Decision Support Tool (For educational use only)")
+# 🔥 HERO HEADER (UPGRADED UI)
+st.markdown("""
+<h1 style='text-align: center; color: #b30000;'>🩸 HemoraAI</h1>
+<p style='text-align: center; font-size:18px;'>
+AI-powered prediction of Postpartum Hemorrhage risk
+</p>
+""", unsafe_allow_html=True)
 
+st.caption("Clinical Decision Support Tool (For educational use only)")
 st.markdown("---")
 
 # Layout
@@ -60,20 +65,37 @@ if st.button("🔍 Predict Risk"):
 
     prob = model.predict_proba(input_data)[0][1]
 
-    # Risk Score
-    st.markdown("## 🧠 Risk Assessment")
-    st.metric(label="Risk Score", value=f"{round(prob*100,2)} %")
-
-    # Risk category
+    # 🔥 RISK DISPLAY CARD
     if prob > 0.7:
         risk_label = "High Risk"
-        st.error("🔴 High Risk of PPH")
+        st.markdown(f"""
+        <div style='background-color:#ffcccc;padding:20px;border-radius:10px'>
+        <h2>🔴 High Risk ({round(prob*100,2)}%)</h2>
+        </div>
+        """, unsafe_allow_html=True)
+
     elif prob > 0.4:
         risk_label = "Moderate Risk"
-        st.warning("🟠 Moderate Risk")
+        st.markdown(f"""
+        <div style='background-color:#fff3cd;padding:20px;border-radius:10px'>
+        <h2>🟠 Moderate Risk ({round(prob*100,2)}%)</h2>
+        </div>
+        """, unsafe_allow_html=True)
+
     else:
         risk_label = "Low Risk"
-        st.success("🟢 Low Risk")
+        st.markdown(f"""
+        <div style='background-color:#d4edda;padding:20px;border-radius:10px'>
+        <h2>🟢 Low Risk ({round(prob*100,2)}%)</h2>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # 🔥 PROGRESS BAR
+    st.progress(int(prob * 100))
+
+    # 🔥 CONFIDENCE
+    confidence = "High" if prob > 0.8 or prob < 0.2 else "Moderate"
+    st.markdown(f"### 🔎 Model Confidence: {confidence}")
 
     st.markdown("---")
 
@@ -90,8 +112,8 @@ if st.button("🔍 Predict Risk"):
 
     st.markdown("---")
 
-    # Explainability
-    st.markdown("### 📊 Why this risk?")
+    # 🔍 Explainability
+    st.markdown("### 🧬 Clinical Drivers")
 
     reasons = []
 
@@ -111,13 +133,12 @@ if st.button("🔍 Predict Risk"):
         reasons.append("Hypertension")
 
     if reasons:
-        st.warning("⚠️ Contributing Factors:")
         for r in reasons:
-            st.write(f"- {r}")
+            st.markdown(f"✅ {r}")
     else:
         st.info("No major high-risk factors detected")
 
-    # Model insights
+    # 🤖 Model Insights
     try:
         st.markdown("### 🤖 Model Insights")
         feature_names = ['Age','Parity','Hb','Prev_LSCS','Induction',
@@ -127,9 +148,20 @@ if st.button("🔍 Predict Risk"):
         sorted_features = sorted(zip(feature_names, importance), key=lambda x: x[1], reverse=True)
 
         for f, v in sorted_features[:3]:
-            st.write(f"• {f} has high influence on prediction")
+            st.write(f"• {f} has high influence")
     except:
         pass
+
+    st.markdown("---")
+
+    # 📊 Risk Graph
+    st.markdown("### 📊 Risk Visualization")
+
+    chart = pd.DataFrame({
+        "Risk": [prob]
+    })
+
+    st.bar_chart(chart)
 
     st.markdown("---")
 
@@ -137,23 +169,11 @@ if st.button("🔍 Predict Risk"):
     st.markdown("### 🏥 Suggested Plan")
 
     if prob > 0.7:
-        st.error("""
-        - Active management of 3rd stage
-        - Arrange blood products
-        - Senior supervision
-        - ICU readiness
-        """)
+        st.error("Prepare emergency response, blood products, ICU readiness.")
     elif prob > 0.4:
-        st.warning("""
-        - Close monitoring
-        - Prepare uterotonics
-        - Senior review advised
-        """)
+        st.warning("Close monitoring and uterotonic preparedness required.")
     else:
-        st.success("""
-        - Routine care
-        - Standard monitoring
-        """)
+        st.success("Routine care with standard monitoring.")
 
     st.markdown("---")
 
@@ -164,7 +184,6 @@ if st.button("🔍 Predict Risk"):
 HemoraAI PPH Risk Report
 Generated: {datetime.now()}
 
-Patient Details:
 Age: {age}
 Parity: {parity}
 Hb: {hb}
@@ -173,11 +192,8 @@ BMI: {bmi}
 Risk Score: {round(prob*100,2)}%
 Risk Category: {risk_label}
 
-Contributing Factors:
+Factors:
 {', '.join(reasons) if reasons else 'None'}
-
-Clinical Plan:
-{risk_label}
 """
 
     st.download_button(
@@ -189,4 +205,4 @@ Clinical Plan:
 
 # Footer
 st.markdown("---")
-st.caption("Version 2.0 | HemoraAI | Developed by Dr. Prashansa Sharma")
+st.caption("Version 3.0 | HemoraAI | Developed by Dr. Prashansa Sharma")
